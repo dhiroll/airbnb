@@ -1,6 +1,5 @@
-
 var express = require('express');
-var serve   = require('express-static');
+var serve = require('express-static');
 var app = express();
 var MongoStore = require('connect-mongo');
 var mongoose = require("mongoose");
@@ -16,12 +15,13 @@ var encBase64 = require("crypto-js/enc-base64");
 mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/airbnb");
 
 app.use(express.static('public'));
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
 app.use(bodyParser.json());
 
 
-var userSchema = new mongoose.Schema(
-{
+var userSchema = new mongoose.Schema({
   "account": {
     "username": String,
     "biography": String
@@ -41,21 +41,21 @@ app.post('/api/user/sign_up', function (req, res) {
   var password = req.body.password;
   var biography = req.body.biography;
   var hash = SHA256(req.body.password + salt).toString(encBase64);
-  
-  var newUser = new Users({ 
-      email: email,
-      salt : salt,
-      token: hash,
-      "account": {
-        username: username,
-        biography: biography
-      }
-    });
-  
-  newUser.save(function(err, obj) {
+
+  var newUser = new Users({
+    email: email,
+    salt: salt,
+    token: hash,
+    "account": {
+      username: username,
+      biography: biography
+    }
+  });
+
+  newUser.save(function (err, obj) {
     if (!err) {
       console.log("we just saved the new user ");
-      return res.json(obj); 
+      return res.json(obj);
     }
     console.log("something went wrong");
   });
@@ -65,24 +65,39 @@ app.post('/api/user/log_in', function (req, res) {
 
   var user_email = req.body.email;
   var user_password = req.body.password;
-  
-  Users.findOne({ email: user_email }).exec(function(err, user) {
 
-    if((SHA256(user_password + user.salt).toString(encBase64)) == user.token){
-      return res.json(user);   
-    }
-    else res.send("not logged");
+  Users.findOne({
+    email: user_email
+  }).exec(function (err, user) {
+    console.log(user.token);
+
+    if ((SHA256(user_password + user.salt).toString(encBase64)) == user.token) {
+      return res.json(user);
+    } else res.send("not logged");
   });
 
 });
 
+app.get("/api/user/:id", function (req, res) {
+  var id = req.params.id;
+  console.log(id);
+  var user_token = req.headers.authorization;
+  console.log(user_token);
+  Users.findOne({
+    _id: id
+  }).exec(function (err, user) {
+    console.log(user.token); 
+    if(user_token == ('Bearer '+ user.token)){
+      return res.json(user);
+    } else return res.send("Unauthorized");
+  });
+});
 
-
-app.get("*", function(req, res) {
+app.get("*", function (req, res) {
   res.status(404).send("Cette route n'existe pas");
 });
 
 
-app.listen(3000, function() {
+app.listen(3000, function () {
   console.log("Server started");
 });
