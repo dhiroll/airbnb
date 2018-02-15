@@ -1,0 +1,27 @@
+<% include partials/header.ejs %>
+<% include partials/menu.ejs %>
+<div class="page">
+    <div class="container">
+
+    <h1 class="">Login Airbnb</h1>
+      
+        <form action='/login' method="post">
+            <div class="blocTitle">
+                <h3>Votre connexion</h3>
+                <div class="blocForm">
+                    <div class="form-group">
+                        <label for="username"> Votre user name</label>
+                        <input text="text" name= "username" class="form-control" placeholder="Entrez votre pseudo">     
+                    </div>
+                    <div class="form-group">
+                        <label for="password"> Votre password</label>
+                        <input type="password" name= "password" class="form-control" placeholder="Password">
+                    </div>           
+                    <button type="submit" class="btn btn-submit">Valider</button>
+                </div>
+            </div>   
+        </form>          
+    </div>
+</div>
+
+<% include partials/footer.ejs %>
