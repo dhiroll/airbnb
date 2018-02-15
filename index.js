@@ -1,17 +1,15 @@
+
 var express = require('express');
 var serve   = require('express-static');
 var app = express();
-var expressSession = require('express-session');
-var MongoStore = require('connect-mongo')(expressSession);
+var MongoStore = require('connect-mongo');
 var mongoose = require("mongoose");
-var passport = require('passport');
 var bodyParser = require("body-parser");
 var LocalStrategy = require('passport-local');
-var User = require('./models/user');
-var _ = require('lodash');
+var uid2 = require('uid2');
 var salt = uid2(64);
 var SHA256 = require("crypto-js/sha256");
-console.log(SHA256("Message"));
+//console.log(SHA256("Message"));
 
 var encBase64 = require("crypto-js/enc-base64");
 
@@ -20,14 +18,8 @@ mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/airbnb");
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-// Activer la gestion de la session
-app.use(expressSession({
-  secret: 'thereactor09',
-  resave: false,
-  saveUninitialized: false,
-  store: new MongoStore({mongooseConnection: mongoose.connection})
-}));
 
 var userSchema = new mongoose.Schema(
 {
@@ -43,42 +35,37 @@ var userSchema = new mongoose.Schema(
 
 var Users = mongoose.model("Users", userSchema);
 
-app.get('/api/user/sign_up', function (req, res) {
-  res.render('createUser.ejs')
-});
-
 app.post('/api/user/sign_up', function (req, res) {
-  //console.log(req.body);
   var username = req.body.username;
   var email = req.body.email;
   var password = req.body.password;
   var biography = req.body.biography;
   var hash = SHA256(req.body.password + salt).toString(encBase64);
- 
   
-
-  var newUser = { 
-    username: username,
-    email: email,
-    biography: biography,
-    user_id: req.user._id,
-    hash: hash
-  };
+  var newUser = new Users({ 
+      email: email,
+      token: hash,
+      "account": {
+        username: username,
+        biography: biography
+      }
+    });
   
-  /* announces.push(newAnnounce);  */
-  var singleUser = new Users(newUser);
-  
-  singleUser.save(function(err, obj) {
-   // console.log(obj);
-    if (err) {
-      console.log("something went wrong");
-    } else {
+  newUser.save(function(err, obj) {
+    if (!err) {
       console.log("we just saved the new user ");
-      res.redirect('/api/user/log_in' + singleUser._id);
+      return res.json(obj); 
     }
+    console.log("something went wrong");
   });
 });
 
+app.post('/api/user/log_in', function (req, res) {
+  var email = req.body.email;
+  var password = req.body.password;
+
+  
+});
 
 app.use("/api/user/log_in", checkAccess);
   
