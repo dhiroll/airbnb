@@ -7,9 +7,8 @@ var mongoose = require("mongoose");
 var bodyParser = require("body-parser");
 var LocalStrategy = require('passport-local');
 var uid2 = require('uid2');
-var salt = uid2(64);
+
 var SHA256 = require("crypto-js/sha256");
-//console.log(SHA256("Message"));
 
 var encBase64 = require("crypto-js/enc-base64");
 
@@ -36,6 +35,7 @@ var userSchema = new mongoose.Schema(
 var Users = mongoose.model("Users", userSchema);
 
 app.post('/api/user/sign_up', function (req, res) {
+  var salt = uid2(10);
   var username = req.body.username;
   var email = req.body.email;
   var password = req.body.password;
@@ -44,6 +44,7 @@ app.post('/api/user/sign_up', function (req, res) {
   
   var newUser = new Users({ 
       email: email,
+      salt : salt,
       token: hash,
       "account": {
         username: username,
@@ -61,32 +62,20 @@ app.post('/api/user/sign_up', function (req, res) {
 });
 
 app.post('/api/user/log_in', function (req, res) {
-  var email = req.body.email;
-  var password = req.body.password;
 
+  var user_email = req.body.email;
+  var user_password = req.body.password;
   
+  Users.findOne({ email: user_email }).exec(function(err, user) {
+
+    if((SHA256(user_password + user.salt).toString(encBase64)) == user.token){
+      return res.json(user);   
+    }
+    else res.send("not logged");
+  });
+
 });
 
-app.use("/api/user/log_in", checkAccess);
-  
-function preProcess(req, res, next) {
-  console.log("Logged up");
-  next();
-}
-
-function checkAccess(req, res, next) {
-  if (req.params.username === "farid" && req.params.password === "azerty") {
-    req.isAllowed = true;
-    next();
-  } else {
-    res.send("Unauthorized");
-  }
-}
-
-app.get("/:username/:password", preProcess, checkAccess, function(req, res) {
-  console.log(req.isAllowed); // true
-  res.send("Hello welcome");
-});
 
 
 app.get("*", function(req, res) {
