@@ -39,6 +39,7 @@ var userSchema = new mongoose.Schema({
   }]
 });
 
+
 var roomSchema = new mongoose.Schema({
   "title": String,
   "description": String,
@@ -56,6 +57,7 @@ var roomSchema = new mongoose.Schema({
     "ref": "User"
   }
 });
+
 
 var Users = mongoose.model("Users", userSchema);
 var Rooms = mongoose.model("Rooms", roomSchema);
@@ -108,6 +110,20 @@ function getUser(req, res, next) {
   });
 }
 
+function addUpTables(req, res, next) {
+  Rooms.find({
+      username: username
+    })
+    .populate('users')
+    .exec(function (err, user) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(user);
+      }
+    });
+}
+
 
 app.post('/api/room/publish', getUser, function (req, res) {
   console.log("user_id", req.user_id)
@@ -132,6 +148,16 @@ app.post('/api/room/publish', getUser, function (req, res) {
     loc: loc,
     user: req.user_id
   });
+  Users.find({})
+    .populate("username")
+    .exec(function (err, posts) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(posts); // l'object id createdBy sera remplacé par l'objet User
+      }
+    });
+
   newRoom.save(function (err, obj) {
     if (!err) {
       console.log("we just saved the new room ");
@@ -173,6 +199,63 @@ app.get("/api/user/:id", function (req, res) {
     } else return res.send("Unauthorized");
   });
 });
+
+app.get("/api/room/:id", function (req, res) {
+  var id = req.params.id;
+  console.log(id)
+  Rooms.findOne({
+    _id: id
+  }).exec(function (err, room) {
+    if (!err) {
+      return res.json(room);
+    }
+  });
+});
+
+function getUser(req, res, next) {
+  var auth = req.headers.authorization;
+  var token = auth.split(" ")[1];
+  Users.findOne({
+    token: token
+  }, function (err, user) {
+    if (user) {
+      req.user_id = user._id;
+      req.username = user.account.username;
+      next();
+    } else {
+      res.json({
+        message: "No user found"
+      })
+    }
+  });
+}
+
+
+app.get("/api/room/:query/:value", function (req, res) {
+
+  require('mongoose-pagination');
+
+  Rooms.
+  where(req.params.query).equals(req.params.value).
+  count({}, function (err, count) {
+    console.log(count);
+  })
+  Rooms.
+  find({}).
+  where(req.params.query).equals(req.params.value).
+  paginate(1, 10).
+  exec(function (err, room) {
+    if (err) {
+      console.log(err);
+    } else {
+      return res.json(room);
+    }
+  });
+});
+
+
+
+
 
 app.get("*", function (req, res) {
   res.status(404).send("Cette route n'existe pas");
